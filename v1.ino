@@ -75,6 +75,7 @@ if (modemaitre == false) {
         }
       else if (key == '#') {
         Serial.println("Entrez le nouveau code secret : ");
+        sequencecodechgt = true;
         while (sequencecodechgt) {
           char key = keypad.getKey();
           if (key) {
