@@ -1,8 +1,10 @@
+#include <Servo.h>
 #include <LiquidCrystal_I2C.h>
 #include <Key.h>
 #include <Keypad.h>
 #include <EEPROM.h>
 #include <Wire.h>
+#include <EEPROM.h>
 const int ROW_NUM = 4; //four rows
 const int COLUMN_NUM = 4; //four columns
 
@@ -32,15 +34,20 @@ byte cadenas[8] = {
 	0b11111,
 	0b00000
 };
-
+Servo moteur;
 void setup(){
   Serial.begin(9600);
   lcd.init();
   lcd.backlight();
   lcd.createChar(0, cadenas);
+  moteur.attach(11);
+  EEPROM.get(0,clesecrete);
+  Serial.print(clesecrete);
 }
 
 void loop(){
+ EEPROM.get(16,modemaitre);
+ 
 if (modemaitre == false)  {
   lcd.clear();
   lcd.setCursor(0, 0);
@@ -71,8 +78,11 @@ void modemaitrefunc() {
     char key = keypad.getKey();
       if (key == '*') {
         modemaitre = false;
+        EEPROM.put(16, modemaitre);
         lcd.clear();
         lcd.print("Locking...");
+        Serial.print(1);
+        moteur.write(180);
         delay(2000);
         break;
         }
@@ -91,6 +101,7 @@ void modemaitrefunc() {
               lcd.print("Saving...");
               delay(500);
               clesecrete = inputkey;
+              EEPROM.put(0, clesecrete);
               inputkey = "";
               goto modemaitre;
              }
@@ -111,6 +122,7 @@ void entreecode() {
   lcd.clear();
   lcd.setCursor(0,0);
   lcd.print("Dial the code");
+  EEPROM.get(0, clesecrete);
   while (true) {
     char key = keypad.getKey();
     if (key) {
@@ -124,9 +136,11 @@ void entreecode() {
           lcd.print("Valid Code");
           lcd.setCursor(0,1);
           lcd.print("Access Allowed");
+          Serial.print(1); // 1 unlocked 2 locked 3 false try
           delay(2000);
-          //action moteur
+          moteur.write(0);
           modemaitre = true;
+          EEPROM.put(16, modemaitre);
           inputkey = "";
           break;
           }
@@ -137,6 +151,7 @@ void entreecode() {
           lcd.print("Invalid Code");
           lcd.setCursor(0,1);
           lcd.print("Access Denied");
+          Serial.print(3);
           inputkey = "";
           delay(2000);
           goto entreecode;
