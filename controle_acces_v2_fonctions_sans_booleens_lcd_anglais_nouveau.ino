@@ -23,7 +23,6 @@ Keypad keypad = Keypad( makeKeymap(keys), pin_rows, pin_column, ROW_NUM, COLUMN_
 String inputkey = "";
 String clesecrete = "";
 String masterkey = "37628469BC";
-String clesecretememoire = "";
 bool modemaitre = true;
 LiquidCrystal_I2C lcd(0x27,  16, 2);
 byte cadenas[8] = {
@@ -101,10 +100,10 @@ void modemaitrefunc() {
               }
             else if (key == 'D') {
               lcd.clear();
+              clesecrete = inputkey;
+              EEPROM.put(32, clesecrete);
               lcd.print("Saving...");
               delay(500);
-              clesecrete = inputkey;
-              EEPROM.put(0, clesecrete);
               inputkey = "";
               goto modemaitre;
              }
@@ -125,8 +124,8 @@ void entreecode() {
   lcd.clear();
   lcd.setCursor(0,0);
   lcd.print("Dial the code");
-  EEPROM.get(0, clesecretememoire);
-  Serial.print(clesecretememoire);
+  EEPROM.get(32, clesecrete);
+  Serial.print(clesecrete);
   while (true) {
     char key = keypad.getKey();
     if (key) {
@@ -134,7 +133,7 @@ void entreecode() {
         resetfunc();
         }
       else if (key == 'D') {
-        if (clesecrete == inputkey || inputkey == masterkey || clesecretememoire == inputkey) {
+        if (clesecrete == inputkey || inputkey == masterkey) {
           lcd.clear();
           lcd.setCursor(0,0);
           lcd.print("Valid Code");
