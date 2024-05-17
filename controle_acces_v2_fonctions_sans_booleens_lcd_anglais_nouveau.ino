@@ -2,28 +2,24 @@
 #include <LiquidCrystal_I2C.h>
 #include <Key.h>
 #include <Keypad.h>
-#include <EEPROM.h>
 #include <Wire.h>
-#include <EEPROM.h>
+#include <SoftwareSerial.h>
 const int ROW_NUM = 4; //four rows
 const int COLUMN_NUM = 4; //four columns
-#include <SoftwareSerial.h>
-
 char keys[ROW_NUM][COLUMN_NUM] = {
   {'1','2','3', 'A'},
   {'4','5','6', 'B'},
   {'7','8','9', 'C'},
   {'*','0','#', 'D'}
 };
-
+SoftwareSerial connexionserie(12, 13);
 byte pin_rows[ROW_NUM] = {10, 9, 8, 7}; //connect to the row pinouts of the keypad
 byte pin_column[COLUMN_NUM] = {6, 5, 4, 3}; //connect to the column pinouts of the keypad
-SoftwareSerial rf (12,13);
 Keypad keypad = Keypad( makeKeymap(keys), pin_rows, pin_column, ROW_NUM, COLUMN_NUM );
 String inputkey = "";
 String clesecrete = "";
 String masterkey = "37628469BC";
-bool modemaitre = true;
+bool modemaitre = false;
 LiquidCrystal_I2C lcd(0x27,  16, 2);
 byte cadenas[8] = {
 	0b01110,
@@ -38,18 +34,15 @@ byte cadenas[8] = {
 Servo moteur;
 void setup(){
   Serial.begin(9600);
+  connexionserie.begin(9600);
   lcd.init();
   lcd.backlight();
   lcd.createChar(0, cadenas);
   moteur.attach(11);
-  rf.begin(9600);
-  pinMode(12, INPUT);
-  pinMode(13, OUTPUT);
+  connexionserie.begin(9600);
 }
 
 void loop(){
- EEPROM.get(16,modemaitre);
- 
 if (modemaitre == false)  {
   lcd.clear();
   lcd.setCursor(0, 0);
@@ -80,11 +73,10 @@ void modemaitrefunc() {
     char key = keypad.getKey();
       if (key == '*') {
         modemaitre = false;
-        EEPROM.put(16, modemaitre);
         lcd.clear();
         lcd.print("Locking...");
-        rf.print(1);
         moteur.write(180);
+        connexionserie.write(2);
         delay(2000);
         break;
         }
@@ -101,8 +93,9 @@ void modemaitrefunc() {
             else if (key == 'D') {
               lcd.clear();
               clesecrete = inputkey;
-              EEPROM.put(32, clesecrete);
               lcd.print("Saving...");
+              connexionserie.print("Key changed");
+              connexionserie.print(clesecrete);
               delay(500);
               inputkey = "";
               goto modemaitre;
@@ -124,7 +117,6 @@ void entreecode() {
   lcd.clear();
   lcd.setCursor(0,0);
   lcd.print("Dial the code");
-  EEPROM.get(32, clesecrete);
   Serial.print(clesecrete);
   while (true) {
     char key = keypad.getKey();
@@ -139,11 +131,11 @@ void entreecode() {
           lcd.print("Valid Code");
           lcd.setCursor(0,1);
           lcd.print("Access Allowed");
-          rf.print(1); // 1 unlocked 2 locked 3 false try
+          connexionserie.write(1);
+          // 1 unlocked 2 locked 3 false try print to rf
           delay(2000);
           moteur.write(0);
           modemaitre = true;
-          EEPROM.put(16, modemaitre);
           inputkey = "";
           break;
           }
@@ -154,7 +146,7 @@ void entreecode() {
           lcd.print("Invalid Code");
           lcd.setCursor(0,1);
           lcd.print("Access Denied");
-          rf.print(3);
+          connexionserie.write(3);
           inputkey = "";
           delay(2000);
           goto entreecode;
